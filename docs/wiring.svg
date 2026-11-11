@@ -1,0 +1,252 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1100" width="1400" height="1100" role="img" aria-labelledby="title desc">
+  <title id="title">DogBot ESP32 D1 mini 玩具狗接線圖</title>
+  <desc id="desc">ESP32 D1 mini 連接四顆 SG90 伺服馬達與 SSD1306 OLED，使用外部 5V 電源並共地。</desc>
+
+  <defs>
+    <style>
+      text { font-family: "Segoe UI", "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif; }
+      .wire { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+      .pin { stroke: #ffffff; stroke-width: 1.5; }
+      .label { fill: #475569; font-size: 12px; }
+      .small { fill: #64748b; font-size: 10.5px; }
+    </style>
+  </defs>
+
+  <rect width="1400" height="1100" fill="#f8fafc"/>
+
+  <!-- ================= 標題 ================= -->
+  <text x="70" y="64" font-size="34" font-weight="700" fill="#0f172a">DogBot 接線圖</text>
+  <text x="70" y="94" font-size="15" fill="#64748b">ESP32 D1 mini · 4 × SG90 · SSD1306 OLED · 外部 5V 電源</text>
+
+  <!-- ================= 圖例 ================= -->
+  <rect x="940" y="28" width="390" height="72" rx="12" fill="#ffffff" stroke="#e2e8f0"/>
+  <g class="wire" stroke-width="3">
+    <line x1="958" y1="52" x2="998" y2="52" stroke="#ef4444"/>
+    <line x1="1068" y1="52" x2="1108" y2="52" stroke="#111827"/>
+    <line x1="1178" y1="52" x2="1218" y2="52" stroke="#f97316"/>
+    <line x1="958" y1="80" x2="998" y2="80" stroke="#2563eb"/>
+    <line x1="1068" y1="80" x2="1108" y2="80" stroke="#16a34a"/>
+    <line x1="1178" y1="80" x2="1218" y2="80" stroke="#7c3aed" stroke-dasharray="6 4"/>
+  </g>
+  <g class="label" font-size="11.5" fill="#475569">
+    <text x="1006" y="56">5V</text>
+    <text x="1116" y="56">GND</text>
+    <text x="1226" y="56">PWM</text>
+    <text x="1006" y="84">SDA</text>
+    <text x="1116" y="84">SCL</text>
+    <text x="1226" y="84">3.3V</text>
+  </g>
+
+  <!-- ================= OLED ================= -->
+  <rect x="80" y="120" width="320" height="110" rx="14" fill="#eef2ff" stroke="#818cf8" stroke-width="2"/>
+  <text x="240" y="156" text-anchor="middle" font-size="18" font-weight="700" fill="#312e81">SSD1306 OLED</text>
+  <text x="240" y="178" text-anchor="middle" font-size="12" fill="#6366f1">128 × 64 · I2C 位址 0x3C</text>
+
+  <g font-size="11" font-weight="600" text-anchor="middle" fill="#3730a3">
+    <text x="130" y="214">GND</text>
+    <text x="190" y="214">VCC</text>
+    <text x="250" y="214">SCL</text>
+    <text x="310" y="214">SDA</text>
+  </g>
+  <g class="pin" fill="#312e81">
+    <circle cx="130" cy="230" r="4.5"/>
+    <circle cx="190" cy="230" r="4.5"/>
+    <circle cx="250" cy="230" r="4.5"/>
+    <circle cx="310" cy="230" r="4.5"/>
+  </g>
+
+  <!-- I2C / 電源連線 -->
+  <g class="wire" stroke-width="2.5">
+    <line x1="130" y1="230" x2="130" y2="290" stroke="#111827"/>
+    <line x1="190" y1="230" x2="190" y2="290" stroke="#7c3aed" stroke-dasharray="6 4"/>
+    <line x1="250" y1="230" x2="250" y2="290" stroke="#16a34a"/>
+    <line x1="310" y1="230" x2="310" y2="290" stroke="#2563eb"/>
+  </g>
+
+  <!-- ================= ESP32 ================= -->
+  <rect x="80" y="290" width="320" height="460" rx="18" fill="#ffffff" stroke="#334155" stroke-width="2.5"/>
+  <text x="240" y="344" text-anchor="middle" font-size="21" font-weight="700" fill="#0f172a">ESP32 D1 mini</text>
+  <text x="240" y="366" text-anchor="middle" font-size="12" fill="#64748b">ESP32-WROOM-32 · 3.3V 邏輯</text>
+
+  <!-- 頂部腳位標籤 -->
+  <g font-size="10" text-anchor="middle" fill="#475569">
+    <text x="130" y="314">GND</text>
+    <text x="190" y="314">3V3</text>
+    <text x="250" y="314">GPIO22</text>
+    <text x="310" y="314">GPIO21</text>
+  </g>
+  <g class="pin" fill="#334155">
+    <circle cx="130" cy="290" r="4.5"/>
+    <circle cx="190" cy="290" r="4.5"/>
+    <circle cx="250" cy="290" r="4.5"/>
+    <circle cx="310" cy="290" r="4.5"/>
+  </g>
+
+  <!-- 右側 PWM 腳位 -->
+  <g font-size="12.5" text-anchor="end" font-weight="600" fill="#0f172a">
+    <text x="384" y="380">GPIO25</text>
+    <text x="384" y="500">GPIO26</text>
+    <text x="384" y="620">GPIO27</text>
+    <text x="384" y="740">GPIO14</text>
+  </g>
+  <g font-size="10" text-anchor="end" fill="#94a3b8">
+    <text x="384" y="395">M1 前左</text>
+    <text x="384" y="515">M2 前右</text>
+    <text x="384" y="635">M3 後左</text>
+    <text x="384" y="755">M4 後右</text>
+  </g>
+  <g class="pin" fill="#f97316">
+    <circle cx="400" cy="375" r="4.5"/>
+    <circle cx="400" cy="495" r="4.5"/>
+    <circle cx="400" cy="615" r="4.5"/>
+    <circle cx="400" cy="735" r="4.5"/>
+  </g>
+
+  <!-- 底部 GND -->
+  <text x="300" y="733" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">GND</text>
+  <circle cx="300" cy="750" r="4.5" fill="#111827" stroke="#ffffff" stroke-width="1.5"/>
+
+  <!-- ================= PWM 訊號線 ================= -->
+  <g class="wire" stroke-width="2.5" stroke="#f97316">
+    <line x1="400" y1="375" x2="900" y2="375"/>
+    <line x1="400" y1="495" x2="900" y2="495"/>
+    <line x1="400" y1="615" x2="900" y2="615"/>
+    <line x1="400" y1="735" x2="900" y2="735"/>
+  </g>
+
+  <!-- ================= SG90 x4 ================= -->
+  <!-- M1 -->
+  <g>
+    <rect x="900" y="330" width="340" height="90" rx="12" fill="#fff7ed" stroke="#f59e0b" stroke-width="2"/>
+    <rect x="935" y="352" width="52" height="46" rx="6" fill="#fde68a" stroke="#d97706"/>
+    <circle cx="961" cy="369" r="5" fill="#ffffff" stroke="#b45309"/>
+    <line x1="961" y1="374" x2="961" y2="392" stroke="#b45309" stroke-width="3" stroke-linecap="round"/>
+    <text x="1004" y="370" font-size="16" font-weight="700" fill="#7c2d12">SG90</text>
+    <text x="1004" y="393" font-size="13" fill="#92400e">M1 · 前左</text>
+    <circle cx="900" cy="375" r="4.5" fill="#f97316" stroke="#ffffff" stroke-width="1.5"/>
+    <text x="914" y="379" font-size="11" font-weight="700" fill="#9a3412">S</text>
+    <circle cx="1240" cy="357" r="4.5" fill="#ef4444" stroke="#ffffff" stroke-width="1.5"/>
+    <text x="1228" y="361" text-anchor="end" font-size="12" font-weight="700" fill="#b91c1c">+</text>
+    <circle cx="1240" cy="393" r="4.5" fill="#111827" stroke="#ffffff" stroke-width="1.5"/>
+    <text x="1228" y="397" text-anchor="end" font-size="12" font-weight="700" fill="#111827">−</text>
+  </g>
+
+  <!-- M2 -->
+  <g>
+    <rect x="900" y="450" width="340" height="90" rx="12" fill="#fff7ed" stroke="#f59e0b" stroke-width="2"/>
+    <rect x="935" y="472" width="52" height="46" rx="6" fill="#fde68a" stroke="#d97706"/>
+    <circle cx="961" cy="489" r="5" fill="#ffffff" stroke="#b45309"/>
+    <line x1="961" y1="494" x2="961" y2="512" stroke="#b45309" stroke-width="3" stroke-linecap="round"/>
+    <text x="1004" y="490" font-size="16" font-weight="700" fill="#7c2d12">SG90</text>
+    <text x="1004" y="513" font-size="13" fill="#92400e">M2 · 前右</text>
+    <circle cx="900" cy="495" r="4.5" fill="#f97316" stroke="#ffffff" stroke-width="1.5"/>
+    <text x="914" y="499" font-size="11" font-weight="700" fill="#9a3412">S</text>
+    <circle cx="1240" cy="477" r="4.5" fill="#ef4444" stroke="#ffffff" stroke-width="1.5"/>
+    <text x="1228" y="481" text-anchor="end" font-size="12" font-weight="700" fill="#b91c1c">+</text>
+    <circle cx="1240" cy="513" r="4.5" fill="#111827" stroke="#ffffff" stroke-width="1.5"/>
+    <text x="1228" y="517" text-anchor="end" font-size="12" font-weight="700" fill="#111827">−</text>
+  </g>
+
+  <!-- M3 -->
+  <g>
+    <rect x="900" y="570" width="340" height="90" rx="12" fill="#fff7ed" stroke="#f59e0b" stroke-width="2"/>
+    <rect x="935" y="592" width="52" height="46" rx="6" fill="#fde68a" stroke="#d97706"/>
+    <circle cx="961" cy="609" r="5" fill="#ffffff" stroke="#b45309"/>
+    <line x1="961" y1="614" x2="961" y2="632" stroke="#b45309" stroke-width="3" stroke-linecap="round"/>
+    <text x="1004" y="610" font-size="16" font-weight="700" fill="#7c2d12">SG90</text>
+    <text x="1004" y="633" font-size="13" fill="#92400e">M3 · 後左</text>
+    <circle cx="900" cy="615" r="4.5" fill="#f97316" stroke="#ffffff" stroke-width="1.5"/>
+    <text x="914" y="619" font-size="11" font-weight="700" fill="#9a3412">S</text>
+    <circle cx="1240" cy="597" r="4.5" fill="#ef4444" stroke="#ffffff" stroke-width="1.5"/>
+    <text x="1228" y="601" text-anchor="end" font-size="12" font-weight="700" fill="#b91c1c">+</text>
+    <circle cx="1240" cy="633" r="4.5" fill="#111827" stroke="#ffffff" stroke-width="1.5"/>
+    <text x="1228" y="637" text-anchor="end" font-size="12" font-weight="700" fill="#111827">−</text>
+  </g>
+
+  <!-- M4 -->
+  <g>
+    <rect x="900" y="690" width="340" height="90" rx="12" fill="#fff7ed" stroke="#f59e0b" stroke-width="2"/>
+    <rect x="935" y="712" width="52" height="46" rx="6" fill="#fde68a" stroke="#d97706"/>
+    <circle cx="961" cy="729" r="5" fill="#ffffff" stroke="#b45309"/>
+    <line x1="961" y1="734" x2="961" y2="752" stroke="#b45309" stroke-width="3" stroke-linecap="round"/>
+    <text x="1004" y="730" font-size="16" font-weight="700" fill="#7c2d12">SG90</text>
+    <text x="1004" y="753" font-size="13" fill="#92400e">M4 · 後右</text>
+    <circle cx="900" cy="735" r="4.5" fill="#f97316" stroke="#ffffff" stroke-width="1.5"/>
+    <text x="914" y="739" font-size="11" font-weight="700" fill="#9a3412">S</text>
+    <circle cx="1240" cy="717" r="4.5" fill="#ef4444" stroke="#ffffff" stroke-width="1.5"/>
+    <text x="1228" y="721" text-anchor="end" font-size="12" font-weight="700" fill="#b91c1c">+</text>
+    <circle cx="1240" cy="753" r="4.5" fill="#111827" stroke="#ffffff" stroke-width="1.5"/>
+    <text x="1228" y="757" text-anchor="end" font-size="12" font-weight="700" fill="#111827">−</text>
+  </g>
+
+  <!-- ================= 電源匯流排 ================= -->
+  <!-- +5V 分支 -->
+  <g class="wire" stroke-width="2.5" stroke="#ef4444">
+    <line x1="1240" y1="357" x2="1290" y2="357"/>
+    <line x1="1240" y1="477" x2="1290" y2="477"/>
+    <line x1="1240" y1="597" x2="1290" y2="597"/>
+    <line x1="1240" y1="717" x2="1290" y2="717"/>
+    <line x1="1290" y1="350" x2="1290" y2="850"/>
+  </g>
+
+  <!-- GND 分支（跨過 +5V 匯流排時使用跳線弧） -->
+  <g class="wire" stroke-width="2.5" stroke="#111827">
+    <path d="M1240 393 H1280 A10 10 0 0 0 1300 393 H1330"/>
+    <path d="M1240 513 H1280 A10 10 0 0 0 1300 513 H1330"/>
+    <path d="M1240 633 H1280 A10 10 0 0 0 1300 633 H1330"/>
+    <path d="M1240 753 H1280 A10 10 0 0 0 1300 753 H1330"/>
+    <line x1="1330" y1="350" x2="1330" y2="850"/>
+  </g>
+
+  <!-- 匯流排接點 -->
+  <g fill="#ef4444">
+    <circle cx="1290" cy="357" r="3.5"/>
+    <circle cx="1290" cy="477" r="3.5"/>
+    <circle cx="1290" cy="597" r="3.5"/>
+    <circle cx="1290" cy="717" r="3.5"/>
+  </g>
+  <g fill="#111827">
+    <circle cx="1330" cy="393" r="3.5"/>
+    <circle cx="1330" cy="513" r="3.5"/>
+    <circle cx="1330" cy="633" r="3.5"/>
+    <circle cx="1330" cy="753" r="3.5"/>
+  </g>
+
+  <!-- 匯流排標籤 -->
+  <text x="1290" y="340" text-anchor="middle" font-size="12" font-weight="700" fill="#b91c1c">5V</text>
+  <text x="1330" y="340" text-anchor="middle" font-size="12" font-weight="700" fill="#111827">GND</text>
+
+  <!-- ================= 外部電源 ================= -->
+  <rect x="980" y="850" width="360" height="110" rx="14" fill="#f0fdf4" stroke="#22c55e" stroke-width="2"/>
+  <text x="1160" y="888" text-anchor="middle" font-size="17" font-weight="700" fill="#14532d">外部 5V 電源</text>
+  <text x="1160" y="911" text-anchor="middle" font-size="12" fill="#166534">5V / 2A 以上（四顆 SG90 同時動作）</text>
+  <text x="1160" y="934" text-anchor="middle" font-size="11" fill="#15803d">建議並聯 470～1000 µF 電容</text>
+
+  <circle cx="1290" cy="850" r="5" fill="#ef4444" stroke="#ffffff" stroke-width="1.5"/>
+  <circle cx="1330" cy="850" r="5" fill="#111827" stroke="#ffffff" stroke-width="1.5"/>
+  <text x="1290" y="874" text-anchor="middle" font-size="12" font-weight="700" fill="#b91c1c">+5V</text>
+  <text x="1330" y="874" text-anchor="middle" font-size="12" font-weight="700" fill="#111827">GND</text>
+
+  <!-- 共地線：電源 GND → ESP32 GND -->
+  <path class="wire" d="M980 900 H300 V750" stroke="#111827" stroke-width="2.5"/>
+  <circle cx="980" cy="900" r="3.5" fill="#111827"/>
+  <text x="620" y="890" text-anchor="middle" font-size="12" font-weight="600" fill="#111827">GND 必須共地</text>
+
+  <!-- ================= 注意事項 ================= -->
+  <rect x="900" y="120" width="440" height="205" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+  <text x="922" y="148" font-size="15" font-weight="700" fill="#0f172a">接線注意事項</text>
+  <g font-size="11.5" fill="#475569">
+    <text x="922" y="176">• 四顆 SG90 請用獨立 5V / 2A 電源，勿由 ESP32 供電</text>
+    <text x="922" y="198">• 馬達電源 GND 必須與 ESP32 GND 共地</text>
+    <text x="922" y="220">• 5V 電源建議並聯 470～1000 µF 電解電容</text>
+    <text x="922" y="242">• OLED VCC 接 3.3V，不可接 5V</text>
+    <text x="922" y="264">• PWM 訊號：M1=GPIO25、M2=26、M3=27、M4=14</text>
+    <text x="922" y="286">• 訊號線（橘）、V+（紅）、GND（黑／棕）</text>
+    <text x="922" y="308">• 接腳可於 config.h 修改</text>
+  </g>
+
+  <!-- ================= 頁尾 ================= -->
+  <text x="70" y="1050" font-size="11" fill="#94a3b8">DogBot v1.0 · 詳細說明請見 README.md</text>
+  <text x="1330" y="1050" text-anchor="end" font-size="11" fill="#94a3b8">ESP32 D1 mini Toy Dog</text>
+</svg>

@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b0f17">
+  <title>DogBot 控制台</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%B6%3C/text%3E%3C/svg%3E">
+</head>
+<body>
+<div class="app">
+
+  <!-- ============ 側邊欄 ============ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-logo">🐶</div>
+      <div class="brand-text">
+        <h1>DogBot</h1>
+        <span>ESP32 D1 mini 玩具狗</span>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <button class="nav-item active" data-panel="status" data-title="系統狀態" data-sub="WiFi 連線資訊與 SPIFFS 儲存空間">
+        <span class="nav-ico">📊</span>
+        <span class="nav-txt"><strong>系統狀態</strong><small>WiFi · 儲存空間</small></span>
+      </button>
+      <button class="nav-item" data-panel="wifi" data-title="WiFi 設定" data-sub="掃描網路、儲存或清除連線設定">
+        <span class="nav-ico">📶</span>
+        <span class="nav-txt"><strong>WiFi 設定</strong><small>掃描 · 連線</small></span>
+      </button>
+      <button class="nav-item" data-panel="motion" data-title="動作控制" data-sub="虛擬搖桿與機械狗特殊指令">
+        <span class="nav-ico">🎮</span>
+        <span class="nav-txt"><strong>動作控制</strong><small>搖桿 · 特殊指令</small></span>
+      </button>
+      <button class="nav-item" data-panel="servo" data-title="SG90 測試" data-sub="四顆伺服馬達角度微調與測試">
+        <span class="nav-ico">🦾</span>
+        <span class="nav-txt"><strong>SG90 測試</strong><small>四軸角度調整</small></span>
+      </button>
+      <button class="nav-item" data-panel="ota" data-title="OTA 更新" data-sub="透過網頁更新 ESP32 韌體">
+        <span class="nav-ico">⬆️</span>
+        <span class="nav-txt"><strong>OTA 更新</strong><small>韌體無線更新</small></span>
+      </button>
+    </nav>
+
+    <div class="sidebar-foot">
+      <div class="conn">
+        <span class="dot offline" id="connDot"></span>
+        <span id="connText">連線中…</span>
+      </div>
+      <div class="ver">
+        <span id="fwVer">v—</span>
+        <span>DogBot</span>
+      </div>
+    </div>
+  </aside>
+
+  <div class="overlay" id="overlay"></div>
+
+  <!-- ============ 主要內容 ============ -->
+  <main class="main">
+    <header class="topbar">
+      <button class="icon-btn menu-btn" id="menuBtn" aria-label="開啟選單">☰</button>
+      <div class="topbar-title">
+        <h2 id="pageTitle">系統狀態</h2>
+        <p id="pageSub">WiFi 連線資訊與 SPIFFS 儲存空間</p>
+      </div>
+      <div class="topbar-right">
+        <span class="mode-badge stand" id="topMode">待機</span>
+      </div>
+    </header>
+
+    <!-- ---------- 系統狀態 ---------- -->
+    <section class="panel active" id="panel-status">
+      <div class="banner hidden" id="apBanner"></div>
+
+      <div class="grid">
+        <article class="card">
+          <div class="card-head">
+            <h3>WiFi 連線</h3>
+            <span class="pill" id="wifiModePill">—</span>
+          </div>
+          <dl class="kv">
+            <div><dt>SSID</dt><dd id="stSsid">—</dd></div>
+            <div><dt>IP 位址</dt><dd class="mono" id="stIp">—</dd></div>
+            <div>
+              <dt>訊號強度</dt>
+              <dd>
+                <span id="stRssi">—</span>
+                <span class="signal" id="signalBars" aria-hidden="true">
+                  <i></i><i></i><i></i><i></i>
+                </span>
+              </dd>
+            </div>
+            <div><dt>MAC</dt><dd class="mono" id="stMac">—</dd></div>
+          </dl>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h3>系統狀態</h3>
+            <span class="pill accent" id="modePill">待機</span>
+          </div>
+          <dl class="kv">
+            <div><dt>韌體版本</dt><dd id="stFw">—</dd></div>
+            <div><dt>運作時間</dt><dd id="stUptime">—</dd></div>
+            <div><dt>可用記憶體</dt><dd id="stHeap">—</dd></div>
+            <div><dt>SPIFFS</dt><dd id="stFs">—</dd></div>
+          </dl>
+        </article>
+      </div>
+
+      <article class="card">
+        <div class="card-head">
+          <h3>SPIFFS 儲存空間</h3>
+          <button class="ghost sm" id="refreshBtn" type="button">↻ 重新整理</button>
+        </div>
+        <div class="usage">
+          <div class="usage-bar"><span id="fsBar"></span></div>
+          <div class="usage-meta">
+            <span id="fsUsed">—</span>
+            <span id="fsTotal">—</span>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="file-table">
+            <thead><tr><th>檔案路徑</th><th class="num">大小</th></tr></thead>
+            <tbody id="fileRows"><tr><td colspan="2" class="empty">尚無資料</td></tr></tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+
+    <!-- ---------- WiFi 設定 ---------- -->
+    <section class="panel" id="panel-wifi">
+      <div class="grid">
+        <article class="card">
+          <div class="card-head">
+            <h3>附近的 WiFi</h3>
+            <button class="primary sm" id="scanBtn" type="button">掃描網路</button>
+          </div>
+          <div class="scan-list" id="scanList">
+            <p class="empty">按下「掃描網路」尋找可用的 SSID</p>
+          </div>
+          <p class="hint">掃描約需 2～5 秒，期間連線可能短暫停頓。</p>
+        </article>
+
+        <article class="card">
+          <div class="card-head"><h3>手動設定</h3></div>
+          <form class="form" id="wifiForm" autocomplete="off">
+            <label>
+              <span>SSID</span>
+              <input id="ssidInput" type="text" placeholder="輸入 WiFi 名稱" maxlength="32" required>
+            </label>
+            <label>
+              <span>密碼</span>
+              <div class="input-with-btn">
+                <input id="passInput" type="password" placeholder="輸入 WiFi 密碼" maxlength="64" autocomplete="new-password">
+                <button class="ghost sm" id="togglePass" type="button">顯示</button>
+              </div>
+            </label>
+            <p class="hint">儲存後裝置會重新啟動，並嘗試連線到新的網路。</p>
+            <div class="btn-row">
+              <button class="primary" type="submit">儲存並連線</button>
+              <button class="danger-ghost" id="clearWifiBtn" type="button">清除連線設定</button>
+            </div>
+          </form>
+        </article>
+      </div>
+    </section>
+
+    <!-- ---------- 動作控制 ---------- -->
+    <section class="panel" id="panel-motion">
+      <div class="motion-layout">
+        <article class="card joystick-card">
+          <div class="card-head">
+            <h3>虛擬搖桿</h3>
+            <span class="pill" id="joyMode">待機</span>
+          </div>
+          <div class="joystick" id="joystick">
+            <span class="joy-grid" aria-hidden="true"></span>
+            <span class="joy-label up">前進</span>
+            <span class="joy-label down">後退</span>
+            <span class="joy-label left">左轉</span>
+            <span class="joy-label right">右轉</span>
+            <div class="joy-knob" id="joyKnob">🐾</div>
+          </div>
+          <div class="joy-readout">
+            <strong id="joyDir">停止</strong>
+            <span id="joySpeed">0%</span>
+          </div>
+          <button class="danger w-full" id="stopBtn" type="button">■ 停止動作</button>
+          <p class="hint">拖曳搖桿或以鍵盤方向鍵控制；放開後自動停下。</p>
+        </article>
+
+        <article class="card">
+          <div class="card-head"><h3>特殊指令</h3></div>
+          <div class="action-grid">
+            <button class="action-btn" data-action="sit" type="button">
+              <span class="action-ico">🐕</span><span>坐下</span>
+            </button>
+            <button class="action-btn" data-action="lie" type="button">
+              <span class="action-ico">😴</span><span>趴下</span>
+            </button>
+            <button class="action-btn" data-action="wave" type="button">
+              <span class="action-ico">🐾</span><span>舉手</span>
+            </button>
+            <button class="action-btn" data-action="wag" type="button">
+              <span class="action-ico">💖</span><span>撒嬌</span>
+            </button>
+          </div>
+
+          <div class="card-head mt">
+            <h3>目前狀態</h3>
+            <button class="ghost sm" id="releaseManual" type="button">回到待機</button>
+          </div>
+          <dl class="kv compact">
+            <div><dt>動作模式</dt><dd id="motionModeText">待機</dd></div>
+            <div><dt>控制來源</dt><dd>虛擬搖桿 / 特殊指令</dd></div>
+          </dl>
+          <p class="hint">特殊指令執行後，坐下與趴下會維持姿勢；舉手與撒嬌會在數秒後自動回到待機。</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- ---------- SG90 測試 ---------- -->
+    <section class="panel" id="panel-servo">
+      <article class="card">
+        <div class="card-head">
+          <h3>SG90 角度測試</h3>
+          <div class="btn-row">
+            <button class="ghost sm" id="syncServo" type="button">同步角度</button>
+            <button class="primary sm" id="centerServo" type="button">全部置中 90°</button>
+            <button class="ghost sm" id="resetCalib" type="button">校正歸零</button>
+          </div>
+        </div>
+        <p class="hint">
+          拖曳滑桿即時調整四顆馬達。調整時會進入「手動測試」模式並暫停行走；
+          按上方「回到待機」或任一特殊指令即可恢復。
+          「微調」可修正馬達中立點，「反轉」用於左右腳安裝方向相反時，設定會自動存到 SPIFFS。
+        </p>
+
+        <div class="servo-grid">
+          <div class="servo-item">
+            <div class="servo-top"><span>M1 · 前左</span><output id="srv0Val">90°</output></div>
+            <input type="range" min="0" max="180" step="1" value="90" data-ch="0" id="srv0">
+            <div class="servo-scale"><span>0°</span><span>90°</span><span>180°</span></div>
+            <div class="servo-calib">
+              <label>微調 <input type="number" min="-30" max="30" step="1" value="0" data-trim="0" id="trim0"></label>
+              <label class="check"><input type="checkbox" data-rev="0" id="rev0"><span>反轉</span></label>
+            </div>
+          </div>
+          <div class="servo-item">
+            <div class="servo-top"><span>M2 · 前右</span><output id="srv1Val">90°</output></div>
+            <input type="range" min="0" max="180" step="1" value="90" data-ch="1" id="srv1">
+            <div class="servo-scale"><span>0°</span><span>90°</span><span>180°</span></div>
+            <div class="servo-calib">
+              <label>微調 <input type="number" min="-30" max="30" step="1" value="0" data-trim="1" id="trim1"></label>
+              <label class="check"><input type="checkbox" data-rev="1" id="rev1"><span>反轉</span></label>
+            </div>
+          </div>
+          <div class="servo-item">
+            <div class="servo-top"><span>M3 · 後左</span><output id="srv2Val">90°</output></div>
+            <input type="range" min="0" max="180" step="1" value="90" data-ch="2" id="srv2">
+            <div class="servo-scale"><span>0°</span><span>90°</span><span>180°</span></div>
+            <div class="servo-calib">
+              <label>微調 <input type="number" min="-30" max="30" step="1" value="0" data-trim="2" id="trim2"></label>
+              <label class="check"><input type="checkbox" data-rev="2" id="rev2"><span>反轉</span></label>
+            </div>
+          </div>
+          <div class="servo-item">
+            <div class="servo-top"><span>M4 · 後右</span><output id="srv3Val">90°</output></div>
+            <input type="range" min="0" max="180" step="1" value="90" data-ch="3" id="srv3">
+            <div class="servo-scale"><span>0°</span><span>90°</span><span>180°</span></div>
+            <div class="servo-calib">
+              <label>微調 <input type="number" min="-30" max="30" step="1" value="0" data-trim="3" id="trim3"></label>
+              <label class="check"><input type="checkbox" data-rev="3" id="rev3"><span>反轉</span></label>
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <!-- ---------- OTA ---------- -->
+    <section class="panel" id="panel-ota">
+      <article class="card">
+        <div class="card-head">
+          <h3>OTA 韌體更新</h3>
+          <span class="pill" id="otaPill">閒置</span>
+        </div>
+
+        <div class="dropzone" id="dropZone" tabindex="0" role="button">
+          <input type="file" id="fwFile" accept=".bin,application/octet-stream" hidden>
+          <div class="drop-icon">⬆️</div>
+          <p><strong>拖曳 .bin 韌體到此</strong></p>
+          <p class="hint">或點擊選擇檔案</p>
+          <p class="file-name" id="fileName"></p>
+        </div>
+
+        <div class="progress hidden" id="otaProgressWrap">
+          <div class="progress-bar"><span id="otaBar"></span></div>
+          <div class="usage-meta">
+            <span id="otaPct">0%</span>
+            <span id="otaStatus"></span>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button class="primary" id="otaBtn" type="button" disabled>開始更新</button>
+        </div>
+
+        <div class="warning">更新期間請保持供電，切勿斷電。完成後裝置會自動重新啟動。</div>
+
+        <ol class="steps">
+          <li>Arduino IDE：<strong>草稿碼 → 匯出已編譯二進位檔</strong></li>
+          <li>選擇 <code>esp32_d1_mini_dog.ino.bin</code></li>
+          <li>上傳完成後裝置重新啟動，重新整理頁面即可</li>
+        </ol>
+      </article>
+    </section>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="/app.js"></script>
+</body>
+</html>
