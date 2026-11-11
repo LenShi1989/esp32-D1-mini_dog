@@ -148,7 +148,7 @@ function renderStatus(s) {
     banner.classList.remove('hidden');
     banner.innerHTML =
       '<strong>目前為 AP 模式</strong>：請將手機／電腦連線到 WiFi <strong>' +
-      esc(wifi.apSsid) + '</strong>（密碼 <strong>dogdog123</strong>），' +
+      esc(wifi.apSsid) + '</strong>（密碼 <strong>12345678</strong>），' +
       '再開啟 <strong>http://' + esc(wifi.apIp || '192.168.4.1') + '</strong> 設定家用網路。';
   } else {
     banner.classList.add('hidden');

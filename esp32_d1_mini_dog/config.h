@@ -26,7 +26,7 @@
 #define WIFI_CONFIG_FILE        "/wifi.txt"
 #define WIFI_CONNECT_TIMEOUT_MS 15000
 #define WIFI_RETRY_AP_MS        20000
-#define AP_PASSWORD             "dogdog123"
+#define AP_PASSWORD             "12345678"
 
 // ---------------- 伺服馬達校正 ----------------
 #define SERVO_CONFIG_FILE "/servo.cfg"
