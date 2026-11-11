@@ -2,7 +2,7 @@
 
 // ---------------- 韌體資訊 ----------------
 #define FW_NAME    "DogBot"
-#define FW_VERSION "1.0.0"
+#define FW_VERSION "1.1.0"
 
 // ---------------- OLED SSD1306 (I2C) ----------------
 #define OLED_SDA    21
@@ -23,10 +23,10 @@
 #define SERVO_CENTER 90
 
 // ---------------- WiFi ----------------
-#define WIFI_CONFIG_FILE        "/wifi.txt"
-#define WIFI_CONNECT_TIMEOUT_MS 15000
-#define WIFI_RETRY_AP_MS        20000
-#define AP_PASSWORD             "12345678"
+#define WIFI_CONFIG_FILE "/wifi.txt"
+#define AP_SSID_PREFIX   "DogBot-"   // 後方自動接上 MAC 後 4 碼
+#define AP_PASSWORD      "12345678"
+#define WIFI_RETRY_MS    15000       // STA 斷線後重試間隔（AP 熱點常駐）
 
 // ---------------- 伺服馬達校正 ----------------
 #define SERVO_CONFIG_FILE "/servo.cfg"

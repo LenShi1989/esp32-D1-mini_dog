@@ -1,5 +1,7 @@
 # DogBot — ESP32 D1 mini 玩具狗
 
+> 目前版本：**v1.1.0**（2026-11-12）
+
 以 **ESP32 D1 mini** 製作的四足玩具狗，使用 4 顆 **SG90** 伺服馬達驅動四條腿，
 搭配 **SSD1306 OLED** 顯示隨機表情，並以 **SPIFFS + Web Server** 提供完整的中文控制台。
 
@@ -19,7 +21,7 @@
 | **WiFi 設定** | 掃描附近 SSID（顯示訊號強度）、點選帶入、手動輸入 SSID / 密碼、清除連線設定 |
 | **動作控制** | 虛擬搖桿（前進 / 後退 / 左轉 / 右轉，支援觸控與鍵盤方向鍵）、特殊指令：坐下、趴下、舉手、撒嬌 |
 | **SG90 測試** | 4 個滑桿即時調整 4 顆馬達角度（0°～180°）、全部置中、同步角度、微調／反轉校正（自動儲存） |
-| **OTA 更新** | 拖曳 `.bin` 韌體上傳、即時進度條、更新後自動重新啟動 |
+| **OTA 更新** | 韌體 `.bin` 與 SPIFFS 前端映像 `spiffs.bin` 上傳、即時進度條、更新後自動重新啟動 |
 
 ### 裝置端
 
@@ -27,23 +29,28 @@
   並顯示目前 IP／AP 位址。
 - **四足步態引擎**：對角步態、非阻塞更新、角度限速平滑移動。
 - **特殊姿勢**：坐下、趴下、舉手（3 秒）、撒嬌（4 秒）。
-- **WiFi 自動回復**：開機連線失敗或連線中斷時自動進入 AP 模式。
-- **OTA**：可直接從網頁更新韌體，不需要插 USB。
+- **WiFi STA + AP 共存**：AP 熱點常駐（`DogBot-<MAC 後 4 碼>`），連上家用 WiFi 後
+  仍可透過熱點進入控制台；STA 斷線會自動重試。
+- **OTA**：可從網頁更新韌體或 SPIFFS 前端映像，不需要插 USB。
 
 ---
 
 ## 專案結構
 
 ```
-esp32_d1_mini_dog/
-├─ esp32_d1_mini_dog.ino   # 主程式：WiFi、Web Server、API、OTA
-├─ config.h                # 腳位、WiFi、OLED、伺服馬達設定
-├─ dog_servo.h / .cpp      # 四足步態與姿勢控制
-├─ dog_face.h / .cpp       # OLED 隨機表情
-└─ data/                   # 上傳到 SPIFFS 的前端檔案
+esp32_d1_mini_dog/            # Arduino sketch
+├─ esp32_d1_mini_dog.ino      # 主程式：WiFi、Web Server、API、OTA
+├─ config.h                   # 腳位、WiFi、OLED、伺服馬達設定
+├─ dog_servo.h / .cpp         # 四足步態與姿勢控制
+├─ dog_face.h / .cpp          # OLED 隨機表情
+└─ data/                      # 上傳到 SPIFFS 的前端檔案
    ├─ index.html
    ├─ style.css
    └─ app.js
+
+tools/                        # 輔助工具
+├─ build_spiffs.ps1           # 建立 SPIFFS 映像（PowerShell）
+└─ build_spiffs.bat           # Windows 批次檔包裝
 ```
 
 > Arduino IDE 會以資料夾名稱尋找主程式，請直接開啟
@@ -163,19 +170,21 @@ API 也使用表單編碼與手動 JSON 輸出，不需要 ArduinoJson。
 ## 第一次使用
 
 1. 開啟序列埠監控（115200）。
-2. 若尚未設定 WiFi，裝置會進入 **AP 模式**：
-   - SSID：`DogBot-XXXX`（XXXX 為 MAC 末兩碼）
+2. 裝置開機後會**同時**開啟 AP 熱點與嘗試連線家用 WiFi：
+   - SSID：`DogBot-XXXX`（XXXX 為 **MAC 後 4 碼**十六進位，例如 `DogBot-1A2B`）
    - 密碼：`12345678`
    - 網址：<http://192.168.4.1>
 3. 用手機或電腦連線到該 AP，開啟網頁。
 4. 進入 **WiFi 設定**：
    - 按「掃描網路」→ 點選家中 SSID → 輸入密碼 → 儲存並連線
    - 或直接手動輸入 SSID / 密碼
-5. 裝置重新啟動後會連上家用 WiFi。之後可用：
-   - `http://<裝置 IP>/`
-   - 或 `http://dogbot.local/`（mDNS，Windows 需支援 Bonjour）
+5. 裝置重新啟動後會連上家用 WiFi，**AP 熱點仍會保持開啟**。之後可用：
+   - `http://<裝置 STA IP>/`（與裝置同一個區網）
+   - `http://192.168.4.1/`（連著 DogBot 熱點時）
+   - `http://dogbot.local/`（mDNS，Windows 需支援 Bonjour）
 
-> AP 模式與 STA 模式都會顯示在同一個控制台；狀態頁會提示目前連線方式。
+> 狀態頁的 WiFi 卡片會同時顯示 STA 與 AP 資訊；即使已連上家用網路，
+> 仍可連線 `DogBot-XXXX` 熱點直接進入控制台。
 
 ### 介面操作
 
@@ -187,18 +196,57 @@ API 也使用表單編碼與手動 JSON 輸出，不需要 ArduinoJson。
 
 ---
 
-## OTA 韌體更新
+## OTA 無線更新
 
-1. Arduino IDE：**Sketch → Export compiled Binary**
+網頁 **OTA 更新** 頁面上方可切換兩種更新目標：
+
+| 目標 | 用途 | 檔案 |
+| --- | --- | --- |
+| **韌體 .bin** | 更新主程式 | `esp32_d1_mini_dog.ino.bin` |
+| **SPIFFS .bin** | 更新網頁前端 | `build/spiffs.bin` |
+
+### 更新韌體
+
+1. Arduino IDE：**草稿碼 → 匯出已編譯二進位檔**
 2. 在專案目錄的 `build/` 下找到 `esp32_d1_mini_dog.ino.bin`
-3. 網頁進入 **OTA 更新**，拖曳 `.bin` 檔，按「開始更新」
-4. 更新完成後裝置自動重新啟動，重新整理頁面即可
+3. 網頁進入 **OTA 更新**，選擇「韌體 .bin」，拖曳檔案後按「開始更新」
+4. 更新完成後裝置自動重新啟動
 
-注意：
+### 更新 SPIFFS 前端
 
-- 只能上傳 **韌體 `.bin`**，不要上傳 SPIFFS 映像檔。
+先用工具建立 SPIFFS 映像（Windows）：
+
+```bat
+tools\build_spiffs.bat
+```
+
+或直接使用 PowerShell：
+
+```powershell
+.\tools\build_spiffs.ps1
+```
+
+預設輸出 `build/spiffs.bin`，大小 128 KB（`0x20000`），對應
+**Minimal SPIFFS (1.9MB APP with OTA)**。若使用其他分割配置，請以 `-Size` 指定：
+
+```powershell
+.\tools\build_spiffs.ps1 -Size 0x100000 -Out build\big_spiffs.bin
+```
+
+等價的手動指令：
+
+```bat
+"%LOCALAPPDATA%\Arduino15\packages\esp32\tools\mkspiffs\0.2.3\mkspiffs.exe" -c esp32_d1_mini_dog\data -b 4096 -p 256 -s 0x20000 build\spiffs.bin
+```
+
+接著在網頁選擇「SPIFFS .bin」，上傳 `build/spiffs.bin`。
+更新完成後裝置會重新啟動；若瀏覽器仍顯示舊畫面，請強制重新整理（Ctrl+F5）。
+
+### 注意事項
+
 - 更新期間請勿斷電。
 - 若更新失敗，重新上電後仍可透過 USB 重新燒錄。
+- SPIFFS 映像不可大於分割區大小，否則更新會失敗。
 
 ---
 
@@ -221,6 +269,7 @@ API 也使用表單編碼與手動 JSON 輸出，不需要 ArduinoJson。
 | POST | `/api/servo/calib/reset` | — | 四顆校正全部歸零 |
 | POST | `/api/reboot` | — | 重新啟動 |
 | POST | `/api/ota` | multipart 檔案 | OTA 韌體更新 |
+| POST | `/api/ota/fs` | multipart 檔案 | OTA SPIFFS 映像更新 |
 
 範例：
 
@@ -286,11 +335,21 @@ const float POSE_LIE[4]   = {136, 136, 44, 44};
 
 ### WiFi / AP
 
-- AP 密碼：`config.h` 的 `AP_PASSWORD`
-- 連線逾時：`WIFI_CONNECT_TIMEOUT_MS`
-- 連線中斷後進入 AP 的等待時間：`WIFI_RETRY_AP_MS`
+- **STA + AP 共存**：AP 熱點一律開啟，STA 可同時連線家用網路
+- AP SSID：`AP_SSID_PREFIX` 加上 MAC 後 4 碼（`config.h`）
+- AP 密碼：`AP_PASSWORD`（預設 `12345678`）
+- STA 斷線重試間隔：`WIFI_RETRY_MS`（預設 15 秒）
+- 熱點 IP 固定為 `192.168.4.1`
 - WiFi 設定儲存在 SPIFFS `/wifi.txt`（純文字，密碼未加密，僅適合家用區網）
 - 伺服馬達校正儲存在 SPIFFS `/servo.cfg`
+
+```cpp
+#define AP_SSID_PREFIX "DogBot-"   // 實際 SSID 例如 DogBot-1A2B
+#define AP_PASSWORD    "12345678"
+#define WIFI_RETRY_MS  15000
+```
+
+> AP 常駐會讓裝置持續廣播；若在意耗電，可在 `maintainNetwork()` 自行調整關閉時機。
 
 ---
 
@@ -316,7 +375,10 @@ A：AP 模式下掃描會暫停 AP 廣播數秒，請稍候再試；亦可直接
 
 **Q：OTA 更新失敗**
 A：確認 Partition Scheme 含 OTA、上傳的是 `.bin` 而非 `.elf`，且更新期間未斷電。
-必要時以 USB 重新燒錄。
+更新 SPIFFS 時請確認 `spiffs.bin` 不超過分割區大小。必要時以 USB 重新燒錄。
+
+**Q：更新 SPIFFS 後網頁沒變**
+A：確認上傳的是 `build\spiffs.bin`、大小正確，並在更新後強制重新整理（Ctrl+F5）清除瀏覽器快取。
 
 **Q：`dogbot.local` 連不上**
 A：Windows 需安裝 Bonjour；也可直接使用狀態頁顯示的 IP。

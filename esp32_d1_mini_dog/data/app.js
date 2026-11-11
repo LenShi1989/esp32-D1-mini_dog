@@ -117,10 +117,16 @@ let servoSynced = false;
 function renderStatus(s) {
   const wifi = s.wifi || {};
 
-  $('#wifiModePill').textContent = wifi.sta ? 'STA 模式' : (wifi.ap ? 'AP 模式' : '未連線');
+  $('#wifiModePill').textContent =
+    wifi.sta && wifi.ap ? 'STA + AP' :
+    wifi.sta ? 'STA 模式' :
+    wifi.ap ? 'AP 模式' : '未連線';
   $('#stSsid').textContent = wifi.ssid || '—';
   $('#stIp').textContent = wifi.ip || '—';
   $('#stMac').textContent = wifi.mac || '—';
+  $('#stAp').textContent = wifi.ap
+    ? (wifi.apSsid || '—') + (wifi.apIp ? ' · ' + wifi.apIp : '')
+    : '—';
   $('#stRssi').textContent = wifi.sta ? (wifi.rssi + ' dBm') : '—';
 
   const level = wifi.sta ? signalLevel(wifi.rssi) : 0;
@@ -142,14 +148,14 @@ function renderStatus(s) {
 
   renderFileTable(fs.files || []);
 
-  // AP 模式提示
+  // 尚未連上家用 WiFi 時顯示 AP 連線提示（AP 熱點常駐）
   const banner = $('#apBanner');
   if (!wifi.sta && wifi.ap) {
     banner.classList.remove('hidden');
     banner.innerHTML =
-      '<strong>目前為 AP 模式</strong>：請將手機／電腦連線到 WiFi <strong>' +
+      '<strong>尚未連線家用 WiFi</strong>：AP 熱點常駐，請連線到 WiFi <strong>' +
       esc(wifi.apSsid) + '</strong>（密碼 <strong>12345678</strong>），' +
-      '再開啟 <strong>http://' + esc(wifi.apIp || '192.168.4.1') + '</strong> 設定家用網路。';
+      '再開啟 <strong>http://' + esc(wifi.apIp || '192.168.4.1') + '</strong> 設定網路。';
   } else {
     banner.classList.add('hidden');
   }
@@ -262,7 +268,7 @@ $('#togglePass').addEventListener('click', () => {
 });
 
 $('#clearWifiBtn').addEventListener('click', async () => {
-  if (!confirm('確定要清除 WiFi 連線設定嗎？裝置將重新啟動並進入 AP 模式。')) return;
+  if (!confirm('確定要清除 WiFi 連線設定嗎？裝置將重新啟動，AP 熱點仍可使用。')) return;
   try {
     const r = await api('/api/wifi/clear', {});
     toast(r.message || '已清除設定', 'success');
@@ -590,17 +596,32 @@ const otaBar = $('#otaBar');
 const otaPct = $('#otaPct');
 const otaStatus = $('#otaStatus');
 const otaPill = $('#otaPill');
+const otaDropTitle = $('#otaDropTitle');
+const otaType = $('#otaType');
 
 let selectedFile = null;
+let otaTarget = 'fw';
 
 function pickFile(file) {
   selectedFile = file || null;
   fileName.textContent = file ? file.name + ' · ' + fmtBytes(file.size) : '';
   otaBtn.disabled = !file;
-  setOtaPill('已選擇');
+  setOtaPill(file ? '已選擇' : '閒置');
 }
 
 function setOtaPill(text) { otaPill.textContent = text; }
+
+$$('.seg-btn', otaType).forEach((btn) => {
+  btn.addEventListener('click', () => {
+    if (otaTarget === btn.dataset.ota) return;
+    otaTarget = btn.dataset.ota;
+    $$('.seg-btn', otaType).forEach((b) => b.classList.toggle('active', b === btn));
+    otaDropTitle.innerHTML = otaTarget === 'fs'
+      ? '<strong>拖曳 spiffs.bin 到此</strong>'
+      : '<strong>拖曳韌體 .bin 到此</strong>';
+    pickFile(null);
+  });
+});
 
 dropZone.addEventListener('click', () => fwFile.click());
 dropZone.addEventListener('keydown', (e) => {
@@ -622,18 +643,20 @@ otaBtn.addEventListener('click', () => {
 });
 
 function startOta(file) {
+  const isFs = otaTarget === 'fs';
+
   otaBtn.disabled = true;
   otaWrap.classList.remove('hidden');
   otaBar.style.width = '0%';
   otaPct.textContent = '0%';
-  otaStatus.textContent = '上傳中…';
+  otaStatus.textContent = isFs ? '上傳 SPIFFS 映像中…' : '上傳韌體中…';
   setOtaPill('更新中');
 
   const fd = new FormData();
-  fd.append('firmware', file, file.name);
+  fd.append(isFs ? 'spiffs' : 'firmware', file, file.name);
 
   const xhr = new XMLHttpRequest();
-  xhr.open('POST', '/api/ota');
+  xhr.open('POST', isFs ? '/api/ota/fs' : '/api/ota');
 
   xhr.upload.onprogress = (e) => {
     if (!e.lengthComputable) return;

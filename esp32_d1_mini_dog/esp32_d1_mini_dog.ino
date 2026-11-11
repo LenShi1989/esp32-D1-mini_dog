@@ -1,6 +1,14 @@
 /*
  * DogBot - ESP32 D1 mini 玩具狗
+ * 版本：v1.1.0（2026-11-12）
  * Arduino IDE 1.8.19 + ESP32 core 2.x / 3.x
+ *
+ * 版本紀錄：
+ *   v1.1.0  WiFi STA + AP 共存（AP 熱點常駐）
+ *           AP SSID 改為 DogBot-<MAC 後 4 碼>，修正顯示 0000 的問題
+ *           OTA 新增 SPIFFS 映像（spiffs.bin）上傳
+ *           新增 tools/build_spiffs 建立映像指令稿
+ *   v1.0.0  初版：四足步態、OLED 表情、SPIFFS 網頁控制台
  *
  * 前端網頁置於 data/，需先用 ESP32 Sketch Data Upload 上傳到 SPIFFS
  */
@@ -10,6 +18,7 @@
 #include <ESPmDNS.h>
 #include <SPIFFS.h>
 #include <Update.h>
+#include <esp_mac.h>
 #include <esp_system.h>
 
 #include "config.h"
@@ -30,6 +39,7 @@ uint32_t restartAt = 0;
 uint32_t wifiLostAt = 0;
 
 bool otaSuccess = false;
+bool otaFsMode = false;
 String otaMessage;
 
 // ---------------------------------------------------------------------------
@@ -147,77 +157,84 @@ bool saveServoConfig() {
 }
 
 // ---------------------------------------------------------------------------
-// WiFi 連線 / AP 模式
+// WiFi 連線 / AP 熱點（STA + AP 共存）
 // ---------------------------------------------------------------------------
-bool connectWifi(uint32_t timeoutMs) {
-  if (wifiSsid.length() == 0) return false;
+// AP SSID 後 4 碼：優先使用 WiFi STA MAC，必要時退回 efuse 基底位址
+String macSuffix() {
+  uint8_t mac[6] = {0, 0, 0, 0, 0, 0};
+  esp_read_mac(mac, ESP_MAC_WIFI_STA);
 
-  WiFi.mode(WIFI_STA);
-  WiFi.setHostname("dogbot");
-  WiFi.setSleep(false);
-  WiFi.begin(wifiSsid.c_str(), wifiPass.c_str());
-
-  uint32_t start = millis();
-  uint32_t lastBlink = 0;
-  bool ledOn = false;
-
-  while (WiFi.status() != WL_CONNECTED && millis() - start < timeoutMs) {
-    if (millis() - lastBlink > 250) {
-      lastBlink = millis();
-      ledOn = !ledOn;
-      digitalWrite(STATUS_LED, ledOn ? HIGH : LOW);
+  bool zero = true;
+  for (uint8_t i = 0; i < 6; i++) {
+    if (mac[i] != 0) {
+      zero = false;
+      break;
     }
-    delay(25);
   }
 
-  digitalWrite(STATUS_LED, LOW);
-  if (WiFi.status() == WL_CONNECTED) return true;
-
-  WiFi.disconnect(false, false);
-  return false;
+  char buf[8];
+  if (zero) {
+    snprintf(buf, sizeof(buf), "%04X", (uint16_t)(ESP.getEfuseMac() & 0xFFFF));
+  } else {
+    snprintf(buf, sizeof(buf), "%02X%02X", mac[4], mac[5]);
+  }
+  return String(buf);
 }
 
 void startAccessPoint() {
   if (apMode) return;
-  apMode = true;
 
-  WiFi.mode(WIFI_AP_STA);
+  // 切換到 AP_STA 不會中斷已連線的 STA
+  if ((WiFi.getMode() & WIFI_AP) == 0) {
+    WiFi.mode(WIFI_AP_STA);
+  }
 
-  uint8_t mac[6];
-  WiFi.macAddress(mac);
-  char ssid[24];
-  snprintf(ssid, sizeof(ssid), "DogBot-%02X%02X", mac[4], mac[5]);
-  apSsid = ssid;
+  apSsid = String(AP_SSID_PREFIX) + macSuffix();
 
-  WiFi.softAPConfig(IPAddress(192, 168, 4, 1), IPAddress(192, 168, 4, 1), IPAddress(255, 255, 255, 0));
-  WiFi.softAP(apSsid.c_str(), AP_PASSWORD);
-
-  Serial.printf("[WiFi] AP mode: %s / %s\n", apSsid.c_str(), AP_PASSWORD);
-  face.setStatus("AP " + WiFi.softAPIP().toString());
-}
-
-void maintainNetwork() {
-  bool sta = (WiFi.status() == WL_CONNECTED);
-
-  if (!apMode) {
-    if (sta) {
-      wifiLostAt = 0;
-    } else {
-      if (wifiLostAt == 0) wifiLostAt = millis();
-      else if (millis() - wifiLostAt > WIFI_RETRY_AP_MS) startAccessPoint();
-    }
+  WiFi.softAPConfig(IPAddress(192, 168, 4, 1), IPAddress(192, 168, 4, 1),
+                    IPAddress(255, 255, 255, 0));
+  if (!WiFi.softAP(apSsid.c_str(), AP_PASSWORD)) {
+    Serial.println("[WiFi] softAP failed");
     return;
   }
 
-  // 從 AP 模式恢復：STA 已連線且沒有使用者連著 AP 時關閉 AP
+  apMode = true;
+  Serial.printf("[WiFi] AP ready: %s / %s  http://%s\n",
+                apSsid.c_str(), AP_PASSWORD, WiFi.softAPIP().toString().c_str());
+  face.setStatus("AP " + WiFi.softAPIP().toString());
+}
+
+void beginSta() {
+  if (wifiSsid.length() == 0) return;
+
+  WiFi.setHostname("dogbot");
+  WiFi.setSleep(false);
+  WiFi.begin(wifiSsid.c_str(), wifiPass.c_str());
+}
+
+void maintainNetwork() {
+  // AP 熱點常駐：若因故未啟動則重新開啟
+  if (!apMode) startAccessPoint();
+
+  bool sta = (WiFi.status() == WL_CONNECTED);
+
   if (sta) {
     wifiLostAt = 0;
-    if (WiFi.softAPgetStationNum() == 0) {
-      WiFi.softAPdisconnect(true);
-      WiFi.mode(WIFI_STA);
-      apMode = false;
-      Serial.println("[WiFi] STA reconnected, AP closed");
-    }
+    return;
+  }
+
+  if (wifiSsid.length() == 0) return;  // 尚未設定家用網路，只保留 AP
+
+  if (wifiLostAt == 0) {
+    wifiLostAt = millis();
+    return;
+  }
+
+  if (millis() - wifiLostAt > WIFI_RETRY_MS) {
+    wifiLostAt = millis();
+    Serial.printf("[WiFi] Reconnecting to %s ...\n", wifiSsid.c_str());
+    WiFi.disconnect(false, false);  // 只中斷 STA，AP 保持運作
+    beginSta();
   }
 }
 
@@ -261,20 +278,15 @@ void setup() {
   if (!face.begin()) Serial.println("[OLED] SSD1306 not found");
   face.setStatus("BOOTING...");
 
-  bool hasConfig = loadWifiConfig(wifiSsid, wifiPass);
-  bool connected = false;
+  // STA + AP 共存：先開啟 AP 熱點，再非阻塞連線家用 WiFi
+  WiFi.mode(WIFI_AP_STA);
+  startAccessPoint();
 
+  bool hasConfig = loadWifiConfig(wifiSsid, wifiPass);
   if (hasConfig && wifiSsid.length() > 0) {
     Serial.printf("[WiFi] Connecting to %s ...\n", wifiSsid.c_str());
     face.setStatus("CONNECTING");
-    connected = connectWifi(WIFI_CONNECT_TIMEOUT_MS);
-  }
-
-  if (!connected) {
-    startAccessPoint();
-  } else {
-    Serial.printf("[WiFi] Connected, IP %s\n", WiFi.localIP().toString().c_str());
-    face.setStatus(WiFi.localIP().toString());
+    beginSta();
   }
 
   setupWebServer();
@@ -284,9 +296,8 @@ void setup() {
     Serial.println("[mDNS] http://dogbot.local");
   }
 
-  Serial.printf("[HTTP] http://%s/\n",
-                connected ? WiFi.localIP().toString().c_str()
-                          : WiFi.softAPIP().toString().c_str());
+  Serial.printf("[HTTP] AP  http://%s/\n", WiFi.softAPIP().toString().c_str());
+  Serial.println("[HTTP] STA 連線後可改用裝置 IP 或 http://dogbot.local/");
 }
 
 void loop() {
@@ -377,7 +388,9 @@ void handleStatus() {
   j += jsonEscape(apSsid);
   j += F("\",\"apIp\":\"");
   j += apMode ? WiFi.softAPIP().toString() : String("-");
-  j += F("\"},");
+  j += F("\",\"apClients\":");
+  j += String(apMode ? WiFi.softAPgetStationNum() : 0);
+  j += F("},");
   j += F("\"uptime\":");
   j += String(millis() / 1000UL);
   j += F(",\"heap\":");
@@ -605,51 +618,98 @@ void handleReboot() {
 }
 
 // ---------------------------------------------------------------------------
-// OTA 韌體更新
+// OTA 更新（韌體 + SPIFFS 映像）
 // ---------------------------------------------------------------------------
+
+void otaWriteChunk(HTTPUpload &upload) {
+  if (otaMessage.length() > 0) return;
+
+  size_t written = Update.write(upload.buf, upload.currentSize);
+  if (written != upload.currentSize) {
+    otaMessage = otaFsMode ? "寫入 SPIFFS 失敗" : "寫入韌體失敗";
+    Update.printError(Serial);
+    Update.abort();
+  }
+}
+
+void otaStart(HTTPUpload &upload, bool fs) {
+  otaSuccess = false;
+  otaMessage = "";
+  otaFsMode = fs;
+
+  Serial.printf("[OTA] %s start: %s\n", fs ? "SPIFFS" : "firmware",
+                upload.filename.c_str());
+
+  if (fs) {
+    // 直接寫入 SPIFFS 分割區前先卸載檔案系統
+    SPIFFS.end();
+  }
+
+  if (!Update.begin(UPDATE_SIZE_UNKNOWN, fs ? U_SPIFFS : U_FLASH)) {
+    otaMessage = fs ? "無法開始 SPIFFS 更新" : "無法開始韌體更新";
+    Update.printError(Serial);
+    if (fs) SPIFFS.begin(true);
+  }
+}
+
+void otaEnd(HTTPUpload &upload) {
+  if (otaMessage.length() == 0) {
+    if (Update.end(true)) {
+      otaSuccess = true;
+      Serial.printf("[OTA] %s success: %u bytes\n",
+                    otaFsMode ? "SPIFFS" : "firmware", (unsigned)upload.totalSize);
+    } else {
+      otaMessage = otaFsMode ? "SPIFFS 映像驗證失敗" : "韌體驗證失敗";
+      Update.printError(Serial);
+    }
+  }
+
+  if (!otaSuccess) {
+    if (Update.isRunning()) Update.abort();
+    if (otaFsMode && !SPIFFS.begin(true)) Serial.println("[FS] SPIFFS remount failed");
+  }
+}
 
 void handleOtaUpload() {
   HTTPUpload &upload = server.upload();
 
   if (upload.status == UPLOAD_FILE_START) {
-    otaSuccess = false;
-    otaMessage = "";
-    Serial.printf("[OTA] Start: %s\n", upload.filename.c_str());
-
-    if (!Update.begin(UPDATE_SIZE_UNKNOWN)) {
-      otaMessage = "無法開始更新";
-      Update.printError(Serial);
-    }
-  } else if (upload.status == UPLOAD_FILE_WRITE) {
-    if (otaMessage.length() == 0) {
-      size_t written = Update.write(upload.buf, upload.currentSize);
-      if (written != upload.currentSize) {
-        otaMessage = "寫入韌體失敗";
-        Update.printError(Serial);
-        Update.abort();
-      }
-    }
+    otaStart(upload, false);
   } else if (upload.status == UPLOAD_FILE_END) {
-    if (otaMessage.length() == 0) {
-      if (Update.end(true)) {
-        otaSuccess = true;
-        Serial.printf("[OTA] Success: %u bytes\n", (unsigned)upload.totalSize);
-      } else {
-        otaMessage = "韌體驗證失敗";
-        Update.printError(Serial);
-      }
-    }
-    if (!otaSuccess && Update.isRunning()) Update.abort();
+    otaEnd(upload);
   } else if (upload.status == UPLOAD_FILE_ABORTED) {
     Update.abort();
     otaMessage = "上傳已中止";
+    if (otaFsMode) SPIFFS.begin(true);
+  } else if (upload.status == UPLOAD_FILE_WRITE) {
+    otaWriteChunk(upload);
+  }
+}
+
+void handleFsOtaUpload() {
+  HTTPUpload &upload = server.upload();
+
+  if (upload.status == UPLOAD_FILE_START) {
+    otaStart(upload, true);
+  } else if (upload.status == UPLOAD_FILE_END) {
+    otaEnd(upload);
+  } else if (upload.status == UPLOAD_FILE_ABORTED) {
+    Update.abort();
+    otaMessage = "上傳已中止";
+    SPIFFS.begin(true);
+  } else if (upload.status == UPLOAD_FILE_WRITE) {
+    otaWriteChunk(upload);
   }
 }
 
 void handleOtaFinish() {
+  const char *label = otaFsMode ? "SPIFFS" : "韌體";
+
   if (otaSuccess) {
-    server.send(200, "application/json; charset=utf-8",
-                "{\"ok\":true,\"message\":\"OTA 更新成功，裝置重新啟動\"}");
+    String j = F("{\"ok\":true,\"message\":\"");
+    j += label;
+    j += F(" 更新成功，裝置重新啟動\"}");
+    server.send(200, "application/json; charset=utf-8", j);
     restartPending = true;
     restartAt = millis() + 1500;
   } else {
@@ -735,6 +795,7 @@ void setupWebServer() {
   server.on("/api/servo/calib/reset", HTTP_POST, handleServoCalibReset);
   server.on("/api/reboot", HTTP_POST, handleReboot);
   server.on("/api/ota", HTTP_POST, handleOtaFinish, handleOtaUpload);
+  server.on("/api/ota/fs", HTTP_POST, handleOtaFinish, handleFsOtaUpload);
 
   server.onNotFound(handleStatic);
 

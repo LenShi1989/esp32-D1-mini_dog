@@ -38,9 +38,9 @@
         <span class="nav-ico">🦾</span>
         <span class="nav-txt"><strong>SG90 測試</strong><small>四軸角度調整</small></span>
       </button>
-      <button class="nav-item" data-panel="ota" data-title="OTA 更新" data-sub="透過網頁更新 ESP32 韌體">
+      <button class="nav-item" data-panel="ota" data-title="OTA 更新" data-sub="透過網頁更新韌體或 SPIFFS 前端">
         <span class="nav-ico">⬆️</span>
-        <span class="nav-txt"><strong>OTA 更新</strong><small>韌體無線更新</small></span>
+        <span class="nav-txt"><strong>OTA 更新</strong><small>韌體 · SPIFFS</small></span>
       </button>
     </nav>
 
@@ -84,6 +84,7 @@
           <dl class="kv">
             <div><dt>SSID</dt><dd id="stSsid">—</dd></div>
             <div><dt>IP 位址</dt><dd class="mono" id="stIp">—</dd></div>
+            <div><dt>AP 熱點</dt><dd id="stAp">—</dd></div>
             <div>
               <dt>訊號強度</dt>
               <dd>
@@ -286,14 +287,19 @@
     <section class="panel" id="panel-ota">
       <article class="card">
         <div class="card-head">
-          <h3>OTA 韌體更新</h3>
+          <h3>OTA 無線更新</h3>
           <span class="pill" id="otaPill">閒置</span>
+        </div>
+
+        <div class="seg" id="otaType">
+          <button class="seg-btn active" type="button" data-ota="fw">韌體 .bin</button>
+          <button class="seg-btn" type="button" data-ota="fs">SPIFFS .bin</button>
         </div>
 
         <div class="dropzone" id="dropZone" tabindex="0" role="button">
           <input type="file" id="fwFile" accept=".bin,application/octet-stream" hidden>
           <div class="drop-icon">⬆️</div>
-          <p><strong>拖曳 .bin 韌體到此</strong></p>
+          <p id="otaDropTitle"><strong>拖曳韌體 .bin 到此</strong></p>
           <p class="hint">或點擊選擇檔案</p>
           <p class="file-name" id="fileName"></p>
         </div>
@@ -313,9 +319,9 @@
         <div class="warning">更新期間請保持供電，切勿斷電。完成後裝置會自動重新啟動。</div>
 
         <ol class="steps">
-          <li>Arduino IDE：<strong>草稿碼 → 匯出已編譯二進位檔</strong></li>
-          <li>選擇 <code>esp32_d1_mini_dog.ino.bin</code></li>
-          <li>上傳完成後裝置重新啟動，重新整理頁面即可</li>
+          <li><strong>韌體</strong>：Arduino IDE → 草稿碼 → 匯出已編譯二進位檔，選擇 <code>esp32_d1_mini_dog.ino.bin</code></li>
+          <li><strong>SPIFFS</strong>：執行 <code>tools\build_spiffs.bat</code>，選擇 <code>build\spiffs.bin</code></li>
+          <li>上傳完成後裝置重新啟動，重新整理頁面即可（必要時強制重新整理清除快取）</li>
         </ol>
       </article>
     </section>

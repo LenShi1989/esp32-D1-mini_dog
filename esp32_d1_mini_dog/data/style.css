@@ -363,6 +363,36 @@ input::placeholder { color: #536078; }
 
 .btn-row { display: flex; flex-wrap: wrap; gap: 9px; align-items: center; }
 
+/* ---------------- Segmented control ---------------- */
+.seg {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #0d1320;
+}
+
+.seg-btn {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 9px;
+  transition: background 0.18s, color 0.18s;
+}
+
+.seg-btn:hover { color: var(--text); background: rgba(255, 255, 255, 0.045); }
+
+.seg-btn.active {
+  background: linear-gradient(180deg, #ffd270, var(--accent));
+  color: #241a00;
+  box-shadow: 0 4px 12px rgba(255, 200, 87, 0.15);
+}
+
 button.primary, button.ghost, button.danger, button.danger-ghost {
   border-radius: 11px;
   padding: 10px 17px;
